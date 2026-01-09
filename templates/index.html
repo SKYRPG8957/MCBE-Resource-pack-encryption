@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCBE Resource Pack Encryption</title>
+    <!-- Append random query param to bust cache -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ range(1, 10000) | random }}">
+    <script>
+        if (window.location.protocol === 'file:') {
+            alert("⚠️ Error: You are opening this file directly!\n\nPlease run 'run_web_app.bat' and access via http://127.0.0.1:5000");
+            document.body.innerHTML = "<div style='color:white; padding:50px; text-align:center;'><h1>⚠️ STOP</h1><p>Please run <b>run_web_app.bat</b> instead of opening index.html directly.</p></div>";
+        }
+    </script>
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="container">
+        <div class="glass-card">
+            <header>
+                <h1>Pack Encryptor</h1>
+                <p>Secure specific assets while keeping manifests readable.</p>
+            </header>
+
+            <form id="uploadForm">
+                <div class="upload-zone" id="dropZone">
+                    <div id="uploadPlaceholder">
+                        <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <div class="upload-text">Drop ZIP file here</div>
+                        <div class="upload-hint">or click to browse</div>
+                    </div>
+
+                    <div id="fileInfoDisplay" style="display: none;">
+                        <svg class="upload-icon" style="height: 40px; margin-bottom:0.5rem; color: #10b981;" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div id="filenameText" class="upload-text" style="word-break: break-all;"></div>
+                        <div class="upload-hint" style="margin-top:0.5rem; text-decoration: underline;">Click to change
+                        </div>
+                    </div>
+
+                    <input type="file" name="file" id="fileInput" accept=".zip" hidden>
+                </div>
+
+                <div class="options">
+                    <h3>Encryption Options</h3>
+
+                    <label class="option-item">
+                        <input type="checkbox" name="exclude_manifest" value="true" checked>
+                        <span class="option-label">Exclude <strong>manifest.json</strong></span>
+                    </label>
+                    <label class="option-item">
+                        <input type="checkbox" name="exclude_pack_icon" value="true" checked>
+                        <span class="option-label">Exclude <strong>pack_icon.png</strong></span>
+                    </label>
+                    <label class="option-item">
+                        <input type="checkbox" name="exclude_bug_icon" value="true" checked>
+                        <span class="option-label">Exclude <strong>bug_pack_icon.png</strong></span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-encrypt" id="submitBtn" disabled>
+                    <span id="btnText">Encrypt & Download</span>
+                </button>
+
+                <div id="statusMessage" class="status-msg" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const fileInfoDisplay = document.getElementById('fileInfoDisplay');
+        const filenameText = document.getElementById('filenameText');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('uploadForm');
+        const statusMessage = document.getElementById('statusMessage');
+        const btnText = document.getElementById('btnText');
+
+        // Drag & Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file) return;
+            if (!file.name.endsWith('.zip')) {
+                showStatus('Please select a valid .zip file', 'error');
+                return;
+            }
+
+            // Set file in a way we can grab it later if needed (mostly for drop)
+            window.currentFile = file;
+
+            // Update UI
+            uploadPlaceholder.style.display = 'none';
+            fileInfoDisplay.style.display = 'block';
+            filenameText.textContent = file.name;
+            submitBtn.disabled = false;
+            statusMessage.style.display = 'none';
+        }
+
+        function showStatus(msg, type) {
+            statusMessage.textContent = msg;
+            statusMessage.className = 'status-msg ' + type;
+            statusMessage.style.display = 'block';
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const file = window.currentFile || fileInput.files[0];
+            if (!file) return;
+
+            // Loading state
+            submitBtn.disabled = true;
+            const originalText = btnText.textContent;
+            btnText.textContent = "";
+            const spinner = document.createElement('div');
+            spinner.className = 'spinner';
+            submitBtn.appendChild(spinner);
+
+            const formData = new FormData(form);
+            if (window.currentFile) {
+                formData.set('file', window.currentFile);
+            }
+
+            try {
+                const response = await fetch('/encrypt', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+
+                    let filename = file.name.replace('.zip', '_encrypted_bundle.zip');
+                    const disposition = response.headers.get('Content-Disposition');
+                    if (disposition && disposition.match(/filename="?([^"]+)"?/)) {
+                        filename = disposition.match(/filename="?([^"]+)"?/)[1];
+                    }
+
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    showStatus('Encryption successful! File download started.', 'success');
+                } else {
+                    const data = await response.json();
+                    showStatus(data.error || 'Server error occurred', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showStatus('Network connection error', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = originalText;
+                if (submitBtn.querySelector('.spinner')) {
+                    submitBtn.removeChild(submitBtn.querySelector('.spinner'));
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
