@@ -5,12 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCBE Resource Pack Encryption</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=3">
 
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/aes-js/3.1.2/index.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 
 <body>
@@ -27,6 +26,14 @@
 
 
             <header>
+                <!-- Process Mode Switcher -->
+                <div class="process-mode-switch">
+                    <button type="button" class="p-mode-btn active" data-process="encrypt"
+                        data-i18n="mode_encrypt">Encrypt</button>
+                    <button type="button" class="p-mode-btn" data-process="decrypt"
+                        data-i18n="mode_decrypt">Decrypt</button>
+                </div>
+
                 <h1 data-i18n="title">Pack Encryptor</h1>
                 <p class="subtitle" data-i18n="subtitle">Secure specific assets while keeping manifests readable.</p>
             </header>
@@ -81,67 +88,115 @@
                     <input type="file" id="folderInput" webkitdirectory directory hidden>
                 </div>
 
-                <div class="options">
-                    <h3 data-i18n="options_title">Encryption Options</h3>
+                <!-- Encryption Options Section -->
+                <div id="encryptOptions" class="options-section">
+                    <div class="options">
+                        <h3 data-i18n="options_title">Encryption Options</h3>
 
-                    <label class="option-item">
-                        <input type="checkbox" id="exclude_manifest" checked>
-                        <span class="checkbox-visual"></span>
-                        <span class="option-label" data-i18n="opt_manifest">Exclude
-                            <strong>manifest.json</strong></span>
-                    </label>
-                    <label class="option-item">
-                        <input type="checkbox" id="exclude_pack_icon" checked>
-                        <span class="checkbox-visual"></span>
-                        <span class="option-label" data-i18n="opt_icon">Exclude <strong>pack_icon.png</strong></span>
-                    </label>
-                    <label class="option-item">
-                        <input type="checkbox" id="exclude_bug_icon" checked>
-                        <span class="checkbox-visual"></span>
-                        <span class="option-label" data-i18n="opt_bug_icon">Exclude
-                            <strong>bug_pack_icon.png</strong></span>
-                    </label>
-
-                    <!-- Advanced Options / Key Management -->
-                    <h3 data-i18n="key_title" style="margin-top: 1.5rem;">Key Management</h3>
-
-                    <div class="key-mode-switch">
-                        <label class="radio-label">
-                            <input type="radio" name="keyMode" value="auto" checked>
-                            <span class="radio-visual"></span>
-                            <span data-i18n="key_auto">Auto Generate</span>
+                        <label class="option-item">
+                            <input type="checkbox" id="exclude_manifest" checked>
+                            <span class="checkbox-visual"></span>
+                            <span class="option-label" data-i18n="opt_manifest">Exclude
+                                <strong>manifest.json</strong></span>
                         </label>
-                        <label class="radio-label">
-                            <input type="radio" name="keyMode" value="manual">
-                            <span class="radio-visual"></span>
-                            <span data-i18n="key_manual">Manual Input</span>
+                        <label class="option-item">
+                            <input type="checkbox" id="exclude_pack_icon" checked>
+                            <span class="checkbox-visual"></span>
+                            <span class="option-label" data-i18n="opt_icon">Exclude
+                                <strong>pack_icon.png</strong></span>
                         </label>
-                    </div>
+                        <label class="option-item">
+                            <input type="checkbox" id="exclude_bug_icon" checked>
+                            <span class="checkbox-visual"></span>
+                            <span class="option-label" data-i18n="opt_bug_icon">Exclude
+                                <strong>bug_pack_icon.png</strong></span>
+                        </label>
 
-                    <div id="manualKeyContainer" style="display: none; margin-top: 0.8rem;">
-                        <input type="text" id="manualKeyInput" class="text-input" maxlength="32"
-                            placeholder="Enter 32-character key" data-i18n-placeholder="key_placeholder">
-                        <div class="input-hint" id="keyLengthHint">0 / 32</div>
-                    </div>
+                        <!-- Advanced Options / Key Management -->
+                        <h3 data-i18n="key_title" style="margin-top: 1.5rem;">Key Management</h3>
 
-                    <!-- Custom Exclusions (Tree View) -->
-                    <h3 data-i18n="tree_title" style="margin-top: 1.5rem;">Select Files to Encrypt</h3>
-                    <p class="tree-hint" data-i18n="tree_hint">Uncheck files to exclude them from encryption.</p>
+                        <div class="key-mode-switch">
+                            <label class="radio-label">
+                                <input type="radio" name="keyMode" value="auto" checked>
+                                <span class="radio-visual"></span>
+                                <span data-i18n="key_auto">Auto Generate</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="keyMode" value="manual">
+                                <span class="radio-visual"></span>
+                                <span data-i18n="key_manual">Manual Input</span>
+                            </label>
+                        </div>
 
-                    <div class="tree-controls">
-                        <button type="button" id="btnExpandAll" class="tree-btn" data-i18n="btn_expand">Expand
-                            All</button>
-                        <button type="button" id="btnCollapseAll" class="tree-btn" data-i18n="btn_collapse">Collapse
-                            All</button>
-                        <button type="button" id="btnResetTree" class="tree-btn" data-i18n="btn_reset">Reset</button>
-                    </div>
+                        <div id="manualKeyContainer" style="display: none; margin-top: 0.8rem;">
+                            <input type="text" id="manualKeyInput" class="text-input" maxlength="32"
+                                placeholder="Enter 32-character key" data-i18n-placeholder="key_placeholder">
+                            <div class="input-hint" id="keyLengthHint">0 / 32</div>
+                        </div>
 
-                    <div id="fileTreeContainer" class="file-tree-container">
-                        <div class="tree-placeholder" data-i18n="tree_placeholder">Upload a file or folder to view
-                            structure</div>
+                        <!-- Custom Exclusions (Tree View) -->
+                        <h3 data-i18n="tree_title" style="margin-top: 1.5rem;">Select Files to Encrypt</h3>
+                        <p class="tree-hint" data-i18n="tree_hint">Uncheck files to exclude them from encryption.</p>
+
+                        <div class="tree-controls">
+                            <button type="button" id="btnExpandAll" class="tree-btn" data-i18n="btn_expand">Expand
+                                All</button>
+                            <button type="button" id="btnCollapseAll" class="tree-btn" data-i18n="btn_collapse">Collapse
+                                All</button>
+                            <button type="button" id="btnResetTree" class="tree-btn"
+                                data-i18n="btn_reset">Reset</button>
+                        </div>
+
+                        <div id="fileTreeContainer" class="file-tree-container">
+                            <div class="tree-placeholder" data-i18n="tree_placeholder">Upload a file or folder to view
+                                structure</div>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Decryption Options Section -->
+                <div id="decryptOptions" class="options-section" style="display: none;">
+                    <div class="options">
+                        <h3 data-i18n="decrypt_key_title">Decryption Key</h3>
+                        <p class="tree-hint" data-i18n="decrypt_key_desc">Enter the 32-character Master Key used to
+                            encrypt this
+                            pack.</p>
+
+                        <input type="text" id="decryptKeyInput" class="text-input" maxlength="32"
+                            placeholder="Enter 32-character master key" data-i18n-placeholder="key_placeholder">
+                        <div class="input-hint" id="decryptKeyHint">0 / 32</div>
+
+                        <!-- GPU Toggle -->
+                        <div style="margin-top: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center;">
+                            <label class="option-item" style="width: 100%; border: none; padding: 0;">
+                                <input type="checkbox" id="useGPU">
+                                <span class="checkbox-visual"></span>
+                                <span class="option-label" data-i18n="opt_gpu" style="font-size: 0.9rem;">Enable GPU
+                                    Acceleration</span>
+                            </label>
+                        </div>
+
+                        <!-- Hack / Analysis Button -->
+                        <div class="hack-section"
+                            style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+                            <h3 style="color: var(--secondary); font-size: 0.85rem; text-transform: uppercase;"
+                                data-i18n="hack_title">⚠ Advanced: Recovery</h3>
+                            <p class="tree-hint" data-i18n="hack_desc">Attempt to analyze and recover the key pattern.
+                            </p>
+                            <button type="button" id="btnHack" class="tree-btn"
+                                style="width: 100%; border-color: var(--secondary); color: var(--secondary);"
+                                data-i18n="hack_btn">
+                                Start Analysis
+                            </button>
+
+                            <div id="hackTerminal" style="display:none;">
+                                <div id="hackOutput">Initializing...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button (inside glass-card) -->
                 <button type="submit" class="btn-encrypt" id="submitBtn" disabled>
                     <span id="btnText" data-i18n="btn_start">Encrypt & Download</span>
                 </button>
@@ -155,10 +210,12 @@
 
                 <div id="statusMessage" class="status-msg" style="display: none;"></div>
             </form>
-        </div>
-    </div>
+            <div style="margin-top: 1rem; text-align: center; color: var(--text-light); font-size: 0.7rem;">v3.0.0
+                (Native Download)</div>
+        </div> <!-- End of glass-card -->
+    </div> <!-- End of container -->
 
-    <script src="script.js"></script>
+    <script src="script.js?v=3"></script>
 </body>
 
 </html>
