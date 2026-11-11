@@ -205,24 +205,22 @@ def encrypt_pack(opts: EncryptOptions, log_cb=None, progress_cb=None, cancel_fla
             if is_dir(item.filename):
                 zout.writestr(item.filename, b'')
 
-        # Root files
+        # ZIP directory entries are optional. Discover subpack roots from
+        # both files and explicit directories so assets are never dropped.
         root_files = []
+        subpack_files = {}
         for item in infolist:
             name = item.filename
-            if is_dir(name) or is_subpack_file(name):
-                continue
-            root_files.append(name)
+            parts = name.split('/')
+            if len(parts) >= 3 and parts[0] == "subpacks" and parts[1]:
+                root = f"subpacks/{parts[1]}/"
+                files = subpack_files.setdefault(root, [])
+                if not is_dir(name):
+                    files.append(name)
+            elif not is_dir(name):
+                root_files.append(name)
 
-        subpack_roots = [i.filename for i in infolist if is_subpack_root(i.filename)]
-        subpack_files = {}
-        for root in subpack_roots:
-            files = []
-            for item in infolist:
-                name = item.filename
-                if is_dir(name) or not name.startswith(root):
-                    continue
-                files.append(name)
-            subpack_files[root] = files
+        subpack_roots = list(subpack_files)
 
         total = len(root_files) + sum(len(v) for v in subpack_files.values()) + (1 + len(subpack_roots))
         done = 0
@@ -624,3 +622,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
